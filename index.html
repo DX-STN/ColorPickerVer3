@@ -158,3 +158,209 @@
     imageInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        img = new Image();
+        img.onload = () => {
+          imgWidth = img.width;
+          imgHeight = img.height;
+          canvas.width = imgWidth;
+          canvas.height = imgHeight;
+          ctx.drawImage(img, 0, 0);
+          errorInfo.textContent = '';
+          sizeInfo.textContent =
+            '画像サイズ: ' + imgWidth + ' × ' + imgHeight + ' ピクセル';
+          updateRangeInfo();
+        };
+        img.onerror = () => {
+          errorInfo.textContent = '画像の読み込みに失敗しました。別の画像を試してください。';
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function clampRangeToImage(range) {
+      if (!img) return range;
+      const { x, y, w, h } = range;
+      let nx = x;
+      let ny = y;
+      let nw = w;
+      let nh = h;
+
+      if (nx < 0) nx = 0;
+      if (ny < 0) ny = 0;
+      if (nx >= imgWidth) nx = imgWidth - 1;
+      if (ny >= imgHeight) ny = imgHeight - 1;
+
+      if (nx + nw > imgWidth) nw = imgWidth - nx;
+      if (ny + nh > imgHeight) nh = imgHeight - ny;
+
+      if (nw < 0) nw = 0;
+      if (nh < 0) nh = 0;
+
+      return { x: nx, y: ny, w: nw, h: nh };
+    }
+
+    function getCurrentRange() {
+      const x = parseInt(rangeXInput.value, 10) || 0;
+      const y = parseInt(rangeYInput.value, 10) || 0;
+      let w = parseInt(rangeWInput.value, 10) || 0;
+      let h = parseInt(rangeHInput.value, 10) || 0;
+
+      if (w < 1) w = 1;
+      if (h < 1) h = 1;
+      if (w > MAX_SIDE) w = MAX_SIDE;
+      if (h > MAX_SIDE) h = MAX_SIDE;
+
+      return { x, y, w, h };
+    }
+
+    function setRangeInputs(range) {
+      rangeXInput.value = range.x;
+      rangeYInput.value = range.y;
+      rangeWInput.value = range.w;
+      rangeHInput.value = range.h;
+    }
+
+    function estimateJsonSize(range) {
+      const { w, h } = range;
+      const pixels = w * h;
+      if (pixels <= 0) return 0;
+
+      const base = '{"x":0,"y":0,"r":255,"g":255,"b":255},';
+      const avgSizePerPixel = base.length;
+      const approx = pixels * avgSizePerPixel + 2;
+      return approx;
+    }
+
+    function toReadableSize(bytes) {
+      if (bytes < 1024) return bytes + ' バイト';
+      const kb = bytes / 1024;
+      if (kb < 1024) return kb.toFixed(1) + ' KB';
+      const mb = kb / 1024;
+      return mb.toFixed(2) + ' MB';
+    }
+
+    function updateRangeInfo() {
+      errorInfo.textContent = '';
+      estimatedSizeInfo.textContent = '';
+
+      if (!img) {
+        sizeInfo.textContent = '画像を読み込んでから範囲を指定してください。';
+        return;
+      }
+
+      let range = getCurrentRange();
+
+      if (range.w > MAX_SIDE || range.h > MAX_SIDE) {
+        errorInfo.textContent =
+          '指定できる範囲は最大 ' + MAX_SIDE + ' × ' + MAX_SIDE + ' ピクセルまでです。';
+        range.w = Math.min(range.w, MAX_SIDE);
+        range.h = Math.min(range.h, MAX_SIDE);
+      }
+
+      range = clampRangeToImage(range);
+      setRangeInputs(range);
+
+      const pixels = range.w * range.h;
+      sizeInfo.textContent =
+        '選択範囲: 左上(' + range.x + ', ' + range.y + '), 幅 ' + range.w +
+        ' × 高さ ' + range.h + ' ピクセル\n' +
+        'ピクセル数: ' + pixels + ' 個';
+
+      const approxBytes = estimateJsonSize(range);
+      estimatedSizeInfo.textContent =
+        '想定JSONサイズ(おおよそ): ' + toReadableSize(approxBytes) + '\n' +
+        '※実際のサイズは色の値などにより前後します。';
+    }
+
+    updateRangeBtn.addEventListener('click', () => {
+      updateRangeInfo();
+    });
+
+    ['change', 'input'].forEach(evt => {
+      rangeXInput.addEventListener(evt, updateRangeInfo);
+      rangeYInput.addEventListener(evt, updateRangeInfo);
+      rangeWInput.addEventListener(evt, updateRangeInfo);
+      rangeHInput.addEventListener(evt, updateRangeInfo);
+    });
+
+    backupBtn.addEventListener('click', () => {
+      if (!img) {
+        alert('先に画像を読み込んでください。');
+        return;
+      }
+
+      updateRangeInfo();
+      const msgErr = errorInfo.textContent.trim();
+      if (msgErr) {
+        alert(msgErr);
+        return;
+      }
+
+      const range = getCurrentRange();
+      const clamped = clampRangeToImage(range);
+
+      if (clamped.w <= 0 || clamped.h <= 0) {
+        alert('有効な選択範囲が指定されていません。');
+        return;
+      }
+
+      const pixels = clamped.w * clamped.h;
+      if (clamped.w > MAX_SIDE || clamped.h > MAX_SIDE) {
+        alert('指定できる範囲は最大 ' + MAX_SIDE + ' × ' + MAX_SIDE + ' ピクセルまでです。');
+        return;
+      }
+
+      const approxBytes = estimateJsonSize(clamped);
+      const approxLabel = toReadableSize(approxBytes);
+
+      const ok = confirm(
+        '選択範囲内ピクセル数: ' + pixels + ' 個\n' +
+        '想定JSONサイズ(おおよそ): ' + approxLabel + '\n\n' +
+        'この範囲のピクセル(x, y, r, g, b)をJSON形式でバックアップファイルに保存します。\n' +
+        '端末のストレージ状況によっては保存に時間がかかったり、失敗する可能性があります。\n\n' +
+        'バックアップを保存しますか？'
+      );
+      if (!ok) return;
+
+      try {
+        const imageData = ctx.getImageData(clamped.x, clamped.y, clamped.w, clamped.h);
+        const data = imageData.data;
+        const w = clamped.w;
+        const h = clamped.h;
+
+        const pixelsArr = [];
+        let index = 0;
+        for (let yy = 0; yy < h; yy++) {
+          for (let xx = 0; xx < w; xx++) {
+            const r = data[index];
+            const g = data[index + 1];
+            const b = data[index + 2];
+            pixelsArr.push({
+              x: clamped.x + xx,
+              y: clamped.y + yy,
+              r,
+              g,
+              b
+            });
+            index += 4;
+          }
+        }
+
+        const backupObj = {
+          type: 'PixelColorBackup',
+          createdAt: new Date().toISOString(),
+          imageSize: { width: imgWidth, height: imgHeight },
+          range: clamped,
+          pixels: pixelsArr
+        };
+
+        const jsonText = JSON.stringify(backupObj);
+        const blob = new Blob([jsonText], { type: 'application/json' });
+        const sizeBytes = blob.size;
+        const sizeLabel = toReadableSize(sizeBytes);
+
+        const now = new Date();
+        
