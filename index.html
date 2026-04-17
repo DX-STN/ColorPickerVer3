@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Color Picker 簡易版 ver3 修正版</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 16px;
+      font-size: 16px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 12px;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 16px 0 8px;
+    }
+    label {
+      display: inline-block;
+      margin: 4px 0;
+    }
+    input[type="file"],
+    input[type="number"],
+    button {
+      font-size: 16px;
+      padding: 6px 10px;
+      box-sizing: border-box;
+    }
+    input[type="number"] {
+      width: 80px;
+    }
+    #canvasWrapper {
+      margin: 12px 0;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      max-width: 100%;
+      touch-action: none;
+      background: #eee;
+    }
+    #info,
+    #sizeInfo,
+    #estimatedSizeInfo,
+    #errorInfo,
+    #backupInfo {
+      font-size: 13px;
+      margin-top: 4px;
+      white-space: pre-line;
+    }
+    #errorInfo {
+      color: #c00;
+    }
+    #rangeArea,
+    #backupArea {
+      margin-top: 16px;
+      padding: 8px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Color Picker 簡易版 ver3 修正版</h1>
+
+  <div>
+    <label>
+      画像を選択:
+      <input type="file" id="imageInput" accept="image/*">
+    </label>
+  </div>
+
+  <div id="canvasWrapper">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="info">
+    画像を読み込んでから、キャンバスをタップするとその位置の色を取得します。
+  </div>
+
+  <div id="rangeArea">
+    <h2>選択範囲の指定</h2>
+    <div>
+      <label>左上X:
+        <input type="number" id="rangeX" value="0" min="0">
+      </label>
+      <label>左上Y:
+        <input type="number" id="rangeY" value="0" min="0">
+      </label>
+    </div>
+    <div>
+      <label>幅(ピクセル):
+        <input type="number" id="rangeW" value="100" min="1" max="512">
+      </label>
+      <label>高さ(ピクセル):
+        <input type="number" id="rangeH" value="100" min="1" max="512">
+      </label>
+    </div>
+    <button id="updateRangeBtn">この範囲でサイズ計算</button>
+    <div id="sizeInfo"></div>
+    <div id="estimatedSizeInfo"></div>
+    <div id="errorInfo"></div>
+  </div>
+
+  <div id="backupArea">
+    <h2>範囲内ピクセルのバックアップ</h2>
+    <p style="margin:4px 0;">
+      選択範囲内の各ピクセルの位置(x, y)と色(r, g, b)をJSON形式で保存します。
+      最大 512×512 ピクセルまで。
+    </p>
+    <button id="backupBtn">選択範囲をJSONで保存</button>
+    <div id="backupInfo"></div>
+  </div>
+
+  <script>
+    const MAX_SIDE = 512;
+
+    const imageInput = document.getElementById('imageInput');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const rangeXInput = document.getElementById('rangeX');
+    const rangeYInput = document.getElementById('rangeY');
+    const rangeWInput = document.getElementById('rangeW');
+    const rangeHInput = document.getElementById('rangeH');
+    const updateRangeBtn = document.getElementById('updateRangeBtn');
+
+    const sizeInfo = document.getElementById('sizeInfo');
+    const estimatedSizeInfo = document.getElementById('estimatedSizeInfo');
+    const errorInfo = document.getElementById('errorInfo');
+
+    const backupBtn = document.getElementById('backupBtn');
+    const backupInfo = document.getElementById('backupInfo');
+
+    let img = null;
+    let imgWidth = 0;
+    let imgHeight = 0;
+
+    // 画像読み込みと描画部分：ここを最優先
+    
