@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+9<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -363,4 +363,39 @@
         const sizeLabel = toReadableSize(sizeBytes);
 
         const now = new Date();
-        const now = new Date(); const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0'); const hh = String(now.getHours()).padStart(2, '0'); const mm = String(now.getMinutes()).padStart(2, '0'); const fileName = 'PixelColorBackup_' + y + m + d + '-' + hh + mm + '.json'; const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); backupInfo.textContent = 'バックアップファイルを保存しました。\\n' + 'ファイル名: ' + fileName + '\\n' + '実際のJSONサイズ: ' + sizeLabel + '\\n' + '※端末やブラウザの設定により、保存場所はダウンロードフォルダなどになります。'; } catch (e) { console.error(e); alert( 'バックアップの保存中にエラーが発生しました。\\n' + '端末のストレージ不足やメモリ不足などが原因の可能性があります。\\n\\n' + '以下の対処をお試しください。\\n' + '・ダウンロードフォルダなどの不要なファイルを削除して、ストレージの空きを増やす\\n' + '・選択範囲の縦横ピクセル数を小さくしてから、もう一度バックアップを実行する' ); } }); canvas.addEventListener('click', (e) => { if (!img) return; const rect = canvas.getBoundingClientRect(); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; const x = Math.floor((e.clientX - rect.left) * scaleX); const y = Math.floor((e.clientY - rect.top) * scaleY); const pixel = ctx.getImageData(x, y, 1, 1).data; const r = pixel[0]; const g = pixel[1]; const b = pixel[2]; alert('座標(' + x + ', ' + y + ') の色\\n' + 'R: ' + r + ', G: ' + g + ', B: ' + b); }); </script> </body> </html>
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const fileName = 'PixelColorBackup_' + y + m + d + '-' + hh + mm + '.json';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url) backupInfo.textContent = 'バックアップファイルを保存しました。\\n' + 'ファイル名: ' + fileName + '\\n' + '実際のJSONサイズ: ' + sizeLabel + '\\n' + '※端末やブラウザの設定により、保存場所はダウンロードフォルダなどになります。';
+      } catch (e) {
+        console.error(e);
+        alert( 'バックアップの保存中にエラーが発生しました。\\n' + '端末のストレージ不足やメモリ不足などが原因の可能性があります。\\n\\n' + '以下の対処をお試しください。\\n' + '・ダウンロードフォルダなどの不要なファイルを削除して、ストレージの空きを増やす\\n' + '・選択範囲の縦横ピクセル数を小さくしてから、もう一度バックアップを実行する' );
+      }
+    });
+    
+    canvas.addEventListener('click', (e) => {
+      if (!img) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = Math.floor((e.clientX - rect.left) * scaleX);
+      const y = Math.floor((e.clientY - rect.top) * scaleY);
+      const pixel = ctx.getImageData(x, y, 1, 1).data; const r = pixel[0];
+      const g = pixel[1];
+      const b = pixel[2];
+      alert('座標(' + x + ', ' + y + ') の色\\n' + 'R: ' + r + ', G: ' + g + ', B: ' + b);
+    });
+  </script>
+</body>
+</html>
